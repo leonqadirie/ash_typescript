@@ -364,7 +364,7 @@ defmodule AshTypescript.TypedController.Codegen.RouteRenderer do
         end)
 
       """
-      export const #{schema_name} = #{formatter.library_prefix()}.object({
+      export const #{schema_name} = #{formatter.object_constructor()}({
       #{field_lines}
       });
       """
