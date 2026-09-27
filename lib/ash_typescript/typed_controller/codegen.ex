@@ -232,6 +232,16 @@ defmodule AshTypescript.TypedController.Codegen do
     collect_route_schemas(opts, &RouteRenderer.render_valibot_schema/1)
   end
 
+  @doc """
+  Collects all per-route Effect schemas from typed controller routes.
+
+  Returns a list of Effect schema strings (one per route that has non-path arguments).
+  These are meant to be passed to SharedSchemaGenerator as `:additional_schemas`.
+  """
+  def collect_route_effect_schemas(opts \\ []) do
+    collect_route_schemas(opts, &RouteRenderer.render_effect_schema/1)
+  end
+
   defp collect_route_schemas(opts, render_fun) do
     router = Keyword.get(opts, :router) || AshTypescript.router()
     routes_config = RouteConfigCollector.get_typed_controllers()
@@ -347,7 +357,7 @@ defmodule AshTypescript.TypedController.Codegen do
   Collects all exports for a list of route infos (for namespace re-export files).
 
   Returns a list of `{name, kind}` tuples where kind is :value, :type, :zod_value,
-  or :valibot_value.
+  :valibot_value, or :effect_value.
   """
   def collect_route_exports(route_infos) do
     route_infos
@@ -403,8 +413,15 @@ defmodule AshTypescript.TypedController.Codegen do
           exports
         end
 
-      if AshTypescript.Rpc.generate_valibot_schemas?() and input_args != [] do
-        exports ++ [{route_valibot_schema_name(route, scope_prefix), :valibot_value}]
+      exports =
+        if AshTypescript.Rpc.generate_valibot_schemas?() and input_args != [] do
+          exports ++ [{route_valibot_schema_name(route, scope_prefix), :valibot_value}]
+        else
+          exports
+        end
+
+      if AshTypescript.Rpc.generate_effect_schemas?() and input_args != [] do
+        exports ++ [{route_effect_schema_name(route, scope_prefix), :effect_value}]
       else
         exports
       end
@@ -471,6 +488,19 @@ defmodule AshTypescript.TypedController.Codegen do
   def route_result_type_name(route, scope_prefix),
     do: Macro.camelize("#{scope_prefix}_#{route.name}_result")
 
+  @doc """
+  Returns the exported Effect schema name for a route, honoring the route's
+  `effect_schema_name` override.
+
+  Single source of truth for the name — used by `RouteRenderer.render_effect_schema/1`
+  (the export itself), `collect_route_exports/1` (namespace re-exports), and
+  `JsonManifestGenerator` (the advertised name), so they cannot drift.
+  """
+  def route_effect_schema_name(route, scope_prefix) do
+    route.effect_schema_name ||
+      build_route_schema_name(route, scope_prefix, AshTypescript.Rpc.effect_schema_suffix())
+  end
+
   defp build_route_schema_name(route, scope_prefix, suffix) do
     case scope_prefix do
       nil ->
@@ -491,7 +521,8 @@ defmodule AshTypescript.TypedController.Codegen do
         route_infos,
         routes_file_path,
         zod_file_path,
-        valibot_file_path \\ nil
+        valibot_file_path \\ nil,
+        effect_file_path \\ nil
       ) do
     output_dir =
       AshTypescript.controller_namespace_output_dir() || Path.dirname(routes_file_path)
@@ -505,7 +536,8 @@ defmodule AshTypescript.TypedController.Codegen do
       namespace_file,
       routes_file_path,
       zod_file_path,
-      valibot_file_path
+      valibot_file_path,
+      effect_file_path
     )
   end
 
