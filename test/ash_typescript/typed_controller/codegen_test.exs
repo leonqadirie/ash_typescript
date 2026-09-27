@@ -1271,7 +1271,8 @@ defmodule AshTypescript.TypedController.CodegenTest do
     end
 
     test "collects no route Valibot schemas" do
-      assert AshTypescript.TypedController.Codegen.collect_route_valibot_schemas(
+      assert AshTypescript.TypedController.Codegen.collect_route_schemas(
+               AshTypescript.Codegen.ValibotSchemaGenerator,
                router: AshTypescript.Test.ControllerResourceTestRouter
              ) == []
     end
@@ -1350,7 +1351,8 @@ defmodule AshTypescript.TypedController.CodegenTest do
     end
 
     test "collects no route Effect schemas" do
-      assert AshTypescript.TypedController.Codegen.collect_route_effect_schemas(
+      assert AshTypescript.TypedController.Codegen.collect_route_schemas(
+               AshTypescript.Codegen.EffectSchemaGenerator,
                router: AshTypescript.Test.ControllerResourceTestRouter
              ) == []
     end
